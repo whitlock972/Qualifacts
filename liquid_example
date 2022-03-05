@@ -1,0 +1,108 @@
+view:test2{
+  derived_table:{
+    sql: select FORM_NAME, CF_EDIT_ID, CF_FORM_ID, CUSTOMER_SCHEMA,
+    {% assign param = field_name._parameter_value %}
+     {% assign fields = param | replace: "select", ""| replace: "'", "" | split: "," %}
+     {% assign num = 0 %}
+        {% for field in fields %}   {% assign num = num | plus: 1 %}   {% if fields.last == field %}
+            {{ field | append: "::string as f" | append: num | prepend: "attribute_value_map:" }}
+          {% else %} {{ field | append: "::string as f" | append: num | append: ", " | prepend: "attribute_value_map:" }}
+          {% endif %}   {% endfor %}
+
+        from
+      (SELECT
+        CF_EDIT_ID, CF_FORM_ID, DOCUMENT_ID, CUSTOMER_SCHEMA, FORM_NAME, CLIENT_ID, CREATED_DATE, QSI_USER_ID
+        ,object_agg(concat(REPORT_FIELD_NAME,'_',CF_FORM_ID::FLOAT), NVL(DATA_RESPONSE,READ_ONLY_VALUE)::variant) as attribute_value_map
+       FROM (
+          SELECT
+            CF_EDIT_ID, CF_FORM_ID, DOCUMENT_ID, CUSTOMER_SCHEMA, FORM_NAME, CLIENT_ID, CREATED_DATE, QSI_USER_ID
+            ,REPORT_FIELD_NAME, READ_ONLY_VALUE, MAX(DATA) AS DATA_RESPONSE
+          FROM PROD.MAROON_QAFUNC_CONFIGURABLE_FORMS
+
+          where  {%assign param_2 = form_id._parameter_value%}
+                {%assign final = param_2 |replace:",","','"%}
+
+                CF_FORM_ID in ({{final}})
+
+          GROUP BY 1, 2, 3, 4, 5, 6, 7, 8, 9, 10
+         )
+       GROUP BY 1, 2, 3, 4, 5, 6, 7, 8)
+              ;;
+}
+
+
+  dimension: cf_edit_id {
+    type: string
+    sql: ${TABLE}.CF_EDIT_ID ;;
+  }
+
+
+
+  parameter: form_id {
+    type: string
+
+
+  }
+
+
+  parameter: field_name {
+
+    type: string
+
+
+    }
+
+ dimension: form_id_field {
+   type: string
+   sql: ${cf_form_id}||"_"||${report_field_name} ;;
+ }
+
+ dimension:  cf_form_id{
+   type: string
+   sql: ${TABLE}. CF_FORM_ID ;;
+ }
+
+ dimension: report_field_name {
+   type: string
+   sql: ${TABLE}.REPORT_FIELD_NAME ;;
+ }
+  dimension:  customer_schema{
+    type: string
+    sql: ${TABLE}. CUSTOMER_SCHEMA ;;
+
+  }
+
+  dimension: s_key {
+    primary_key: yes
+    type: string
+    hidden:yes
+    sql: ${TABLE}.S_KEY ;;
+
+  }
+
+
+
+  # dimension: s_key {
+  #   primary_key: yes
+  #   type: string
+  #   sql: ${TABLE}.S_KEY ;;
+  # }
+
+
+
+
+  dimension: report_form_name {
+    type: string hidden:yes
+    sql: ${TABLE}.FORM_NAME ;;
+  }
+
+  dimension: f1 {
+    type: string
+    hidden:yes
+    sql: ${TABLE}.f1 ;;
+  }
+
+  dimension: f2 {
+    type: string hidden:yes
+    sql: ${TABLE}.f2 ;;
+  }
